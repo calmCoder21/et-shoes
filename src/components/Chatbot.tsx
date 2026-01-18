@@ -20,7 +20,9 @@ import {
   Zap,
   Search,
   Package,
-  Palette
+  Palette,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 
 type Message = {
@@ -41,7 +43,22 @@ export default function Chatbot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Detect mobile screen
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -53,7 +70,6 @@ export default function Chatbot() {
 
   // Convert AI response into text + clickable links
   const parseReply = (text: string): React.ReactNode => {
-    // Match AI product links in format /product/<uuid>
     const regex = /\/product\/([0-9a-f-]+)/g;
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
@@ -68,12 +84,12 @@ export default function Chatbot() {
         <Link
           key={match.index}
           href={`/shop/product/${productId}`}
-          className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1.5 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 ml-1 mr-1"
+          className={`inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-2 py-1 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 ${isMobile ? 'text-sm' : ''}`}
           onClick={() => setOpen(false)}
         >
-          <ShoppingBag className="w-3 h-3 mr-1.5" />
-          View Product
-          <ChevronRight className="w-3 h-3 ml-1" />
+          <ShoppingBag className={`${isMobile ? 'w-3 h-3 mr-1' : 'w-3 h-3 mr-1.5'}`} />
+          {isMobile ? 'View' : 'View Product'}
+          <ChevronRight className={`${isMobile ? 'w-3 h-3 ml-1' : 'w-3 h-3 ml-1'}`} />
         </Link>
       );
 
@@ -88,7 +104,7 @@ export default function Chatbot() {
 
   const simulateTyping = async (text: string): Promise<void> => {
     setIsTyping(true);
-    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate typing delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     setIsTyping(false);
     return Promise.resolve();
   };
@@ -114,7 +130,6 @@ export default function Chatbot() {
 
       const data = await res.json();
       
-      // Simulate typing animation
       await simulateTyping(data.reply);
       
       const parsed = parseReply(data.reply);
@@ -149,12 +164,21 @@ export default function Chatbot() {
     "What's the price range?"
   ];
 
+  // Responsive dimensions
+  const chatWidth = isMobile ? (isExpanded ? 'calc(100vw - 2rem)' : 'calc(100vw - 3rem)') : '420px';
+  const chatHeight = isMobile ? (isExpanded ? 'calc(100vh - 6rem)' : 'calc(70vh - 4rem)') : '560px';
+  const chatBottom = isMobile ? (isExpanded ? '1rem' : '6rem') : '8rem';
+
   return (
     <>
       {/* Floating Button */}
       <motion.button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center group"
+        className={`fixed z-50 rounded-full shadow-2xl flex items-center justify-center group ${
+          isMobile 
+            ? 'bottom-4 right-4 w-14 h-14' 
+            : 'bottom-6 right-6 w-16 h-16'
+        }`}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, y: 20 }}
@@ -173,7 +197,7 @@ export default function Chatbot() {
               exit={{ rotate: 90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <X className="w-7 h-7 text-white relative z-10" />
+              <X className={`${isMobile ? 'w-6 h-6' : 'w-7 h-7'} text-white relative z-10`} />
             </motion.div>
           ) : (
             <motion.div
@@ -183,7 +207,7 @@ export default function Chatbot() {
               exit={{ rotate: -90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <MessageCircle className="w-7 h-7 text-white relative z-10" />
+              <MessageCircle className={`${isMobile ? 'w-6 h-6' : 'w-7 h-7'} text-white relative z-10`} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -194,7 +218,7 @@ export default function Chatbot() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 1 }}
-            className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white"
+            className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-full border-2 border-white"
           >
             <div className="w-full h-full animate-ping bg-red-400 rounded-full opacity-75"></div>
           </motion.div>
@@ -209,38 +233,65 @@ export default function Chatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-32 right-6 z-50 w-[420px] h-[560px]"
+            className={`fixed z-50 ${isMobile ? 'inset-x-0 mx-auto' : 'right-6'}`}
+            style={{
+              width: chatWidth,
+              height: chatHeight,
+              bottom: chatBottom,
+              ...(isMobile && !isExpanded ? { maxWidth: '400px' } : {})
+            }}
           >
             <Card className="w-full h-full flex flex-col shadow-2xl border-0 overflow-hidden rounded-2xl bg-white">
               {/* Header */}
               <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-600 to-purple-600">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <Bot className="w-6 h-6 text-white" />
+                    <div className={`rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ${
+                      isMobile ? 'w-8 h-8' : 'w-10 h-10'
+                    }`}>
+                      <Bot className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-white`} />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg">Et.Shoes Assistant</h3>
+                    <div className="min-w-0">
+                      <h3 className={`font-bold text-white truncate ${isMobile ? 'text-base' : 'text-lg'}`}>
+                        Et.Shoes Assistant
+                      </h3>
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-blue-100 text-sm">Online • Ready to help</span>
+                        <span className={`text-blue-100 truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                          Online • Ready to help
+                        </span>
                       </div>
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                  >
-                    <X className="w-5 h-5 text-white" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {isMobile && (
+                      <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                        aria-label={isExpanded ? "Minimize" : "Maximize"}
+                      >
+                        {isExpanded ? (
+                          <Minimize2 className="w-4 h-4 text-white" />
+                        ) : (
+                          <Maximize2 className="w-4 h-4 text-white" />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setOpen(false)}
+                      className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <X className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Chat Messages */}
               <div
                 ref={scrollRef}
-                className="flex-1 p-4 overflow-y-auto bg-gradient-to-b from-gray-50 to-white space-y-4"
+                className="flex-1 p-3 md:p-4 overflow-y-auto bg-gradient-to-b from-gray-50 to-white space-y-3 md:space-y-4"
               >
                 {messages.map((m, i) => (
                   <motion.div
@@ -251,33 +302,33 @@ export default function Chatbot() {
                     className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl p-4 ${
+                      className={`max-w-[90%] md:max-w-[85%] rounded-2xl p-3 md:p-4 ${
                         m.role === "user"
                           ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-br-none"
                           : "bg-white border border-gray-200 shadow-sm rounded-bl-none"
                       }`}
                     >
                       <div className="flex items-center mb-2">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center mr-2 ${
+                        <div className={`rounded-full flex items-center justify-center mr-2 ${
                           m.role === "user" ? "bg-white/20" : "bg-gradient-to-r from-blue-100 to-purple-100"
-                        }`}>
+                        } ${isMobile ? 'w-6 h-6' : 'w-7 h-7'}`}>
                           {m.role === "user" ? (
-                            <User className="w-3.5 h-3.5 text-white" />
+                            <User className={`${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-white`} />
                           ) : (
-                            <Bot className="w-3.5 h-3.5 text-blue-600" />
+                            <Bot className={`${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-blue-600`} />
                           )}
                         </div>
-                        <span className={`text-sm font-medium ${m.role === "user" ? "text-white/90" : "text-gray-700"}`}>
+                        <span className={`text-xs md:text-sm font-medium ${m.role === "user" ? "text-white/90" : "text-gray-700"}`}>
                           {m.role === "user" ? "You" : "Shoe Assistant"}
                         </span>
                         {m.timestamp && (
-                          <span className={`text-xs ml-auto ${m.role === "user" ? "text-white/70" : "text-gray-500"}`}>
+                          <span className={`text-xs ml-auto ${m.role === "user" ? "text-white/70" : "text-gray-500"} ${isMobile ? 'text-[10px]' : ''}`}>
                             {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
                       
-                      <div className={m.role === "user" ? "text-white" : "text-gray-800"}>
+                      <div className={`${m.role === "user" ? "text-white" : "text-gray-800"} ${isMobile ? 'text-sm' : ''}`}>
                         {Array.isArray(m.content) ? m.content : m.content}
                       </div>
                     </div>
@@ -291,28 +342,30 @@ export default function Chatbot() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-none p-4">
+                    <div className="bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-none p-3 md:p-4">
                       <div className="flex items-center mb-2">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center mr-2">
-                          <Bot className="w-3.5 h-3.5 text-blue-600" />
+                        <div className={`rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center mr-2 ${
+                          isMobile ? 'w-6 h-6' : 'w-7 h-7'
+                        }`}>
+                          <Bot className={`${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-blue-600`} />
                         </div>
-                        <span className="text-sm font-medium text-gray-700">Shoe Assistant</span>
+                        <span className="text-xs md:text-sm font-medium text-gray-700">Shoe Assistant</span>
                       </div>
                       <div className="flex space-x-1">
                         <motion.div
                           animate={{ y: [0, -5, 0] }}
                           transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full"
                         />
                         <motion.div
                           animate={{ y: [0, -5, 0] }}
                           transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full"
                         />
                         <motion.div
                           animate={{ y: [0, -5, 0] }}
                           transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                          className="w-2 h-2 bg-gray-400 rounded-full"
+                          className="w-1.5 h-1.5 md:w-2 md:h-2 bg-gray-400 rounded-full"
                         />
                       </div>
                     </div>
@@ -327,8 +380,8 @@ export default function Chatbot() {
                     transition={{ delay: 0.5 }}
                     className="space-y-2"
                   >
-                    <p className="text-sm text-gray-500 font-medium px-2">Try asking:</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <p className="text-xs md:text-sm text-gray-500 font-medium px-1 md:px-2">Try asking:</p>
+                    <div className={`grid gap-2 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
                       {quickQuestions.map((question, i) => (
                         <button
                           key={i}
@@ -336,16 +389,20 @@ export default function Chatbot() {
                             setInput(question);
                             setTimeout(() => sendMessage(), 100);
                           }}
-                          className="text-left p-3 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+                          className="text-left p-2 md:p-3 bg-white border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
                         >
                           <div className="flex items-center">
-                            <div className="w-6 h-6 rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center mr-2">
-                              {i === 0 ? <Zap className="w-3 h-3 text-blue-600" /> :
-                               i === 1 ? <Package className="w-3 h-3 text-purple-600" /> :
-                               i === 2 ? <Palette className="w-3 h-3 text-pink-600" /> :
-                               <Search className="w-3 h-3 text-green-600" />}
+                            <div className={`rounded-lg bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center mr-2 ${
+                              isMobile ? 'w-5 h-5' : 'w-6 h-6'
+                            }`}>
+                              {i === 0 ? <Zap className="w-2.5 h-2.5 md:w-3 md:h-3 text-blue-600" /> :
+                               i === 1 ? <Package className="w-2.5 h-2.5 md:w-3 md:h-3 text-purple-600" /> :
+                               i === 2 ? <Palette className="w-2.5 h-2.5 md:w-3 md:h-3 text-pink-600" /> :
+                               <Search className="w-2.5 h-2.5 md:w-3 md:h-3 text-green-600" />}
                             </div>
-                            <span className="text-sm text-gray-700 group-hover:text-gray-900">{question}</span>
+                            <span className="text-xs md:text-sm text-gray-700 group-hover:text-gray-900 truncate">
+                              {question}
+                            </span>
                           </div>
                         </button>
                       ))}
@@ -355,7 +412,7 @@ export default function Chatbot() {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 border-t border-gray-100 bg-white">
+              <div className="p-3 md:p-4 border-t border-gray-100 bg-white">
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
                     <Input
@@ -363,16 +420,16 @@ export default function Chatbot() {
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask about shoes, sizes, colors..."
                       onKeyDown={(e) => e.key === "Enter" && !loading && sendMessage()}
-                      className="pl-12 pr-4 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className={`pl-10 md:pl-12 pr-8 md:pr-12 py-2 md:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm md:text-base`}
                       disabled={loading}
                     />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                      <MessageCircle className="w-5 h-5 text-gray-400" />
+                    <div className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2">
+                      <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
                     </div>
                     {input && (
                       <button
                         onClick={() => setInput("")}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
                       >
                         ✕
                       </button>
@@ -382,19 +439,21 @@ export default function Chatbot() {
                   <Button
                     onClick={sendMessage}
                     disabled={loading || !input.trim()}
-                    className="px-5 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 md:px-5 md:py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4 md:w-5 md:h-5" />
                     )}
                   </Button>
                 </div>
                 
-                <div className="mt-3 flex items-center justify-center text-xs text-gray-500">
-                  <Sparkles className="w-3 h-3 mr-1.5" />
-                  <span>Powered by AI • Responses may take a moment</span>
+                <div className="mt-2 md:mt-3 flex items-center justify-center text-xs text-gray-500">
+                  <Sparkles className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                  <span className="text-[10px] md:text-xs truncate">
+                    Powered by AI • Responses may take a moment
+                  </span>
                 </div>
               </div>
             </Card>
