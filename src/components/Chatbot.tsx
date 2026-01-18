@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ import {
 
 type Message = {
   role: "user" | "assistant";
-  content: string | JSX.Element[];
+  content: string | React.ReactNode;
   timestamp?: Date;
 };
 
@@ -51,10 +52,10 @@ export default function Chatbot() {
   }, [messages, isTyping]);
 
   // Convert AI response into text + clickable links
-  const parseReply = (text: string): JSX.Element[] => {
+  const parseReply = (text: string): React.ReactNode => {
     // Match AI product links in format /product/<uuid>
     const regex = /\/product\/([0-9a-f-]+)/g;
-    const parts: JSX.Element[] = [];
+    const parts: React.ReactNode[] = [];
     let lastIndex = 0;
 
     let match;
