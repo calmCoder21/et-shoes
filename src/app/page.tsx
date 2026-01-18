@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -25,6 +26,11 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
+  const [windowHeight, setWindowHeight] = useState(0);
+
+  useEffect(() => {
+    setWindowHeight(window.innerHeight); // only runs on client
+  }, []);
   return (
     <div className="relative overflow-hidden">
       {/* Background Elements */}
@@ -45,29 +51,29 @@ export default function HomePage() {
         </div>
 
         {/* Floating Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-4 h-4 bg-white/10 rounded-full"
-              initial={{ y: -100 }}
-              animate={{ 
-                y: window.innerHeight + 100,
-                x: Math.sin(i) * 100
-              }}
-              transition={{
-                duration: 15 + i * 2,
-                repeat: Infinity,
-                delay: i * 2
-              }}
-              style={{
-                left: `${20 + i * 15}%`,
-                width: `${10 + i * 4}px`,
-                height: `${10 + i * 4}px`,
-              }}
-            />
-          ))}
-        </div>
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(5)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-4 h-4 bg-white/10 rounded-full"
+            initial={{ y: -100 }}
+            animate={{ 
+              y: windowHeight ? windowHeight + 100 : 0, // only use windowHeight after mount
+              x: Math.sin(i) * 100
+            }}
+            transition={{
+              duration: 15 + i * 2,
+              repeat: Infinity,
+              delay: i * 2
+            }}
+            style={{
+              left: `${20 + i * 15}%`,
+              width: `${10 + i * 4}px`,
+              height: `${10 + i * 4}px`,
+            }}
+          />
+        ))}
+      </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
