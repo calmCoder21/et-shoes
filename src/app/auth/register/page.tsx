@@ -230,16 +230,16 @@ export default function RegisterPage() {
         <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-pink-200 rounded-full opacity-10 blur-3xl"></div>
       </div>
 
-      {/* Home Navigation */}
+      {/* Home Navigation - Mobile responsive positioning */}
       <Link
         href="/"
-        className="fixed top-6 left-6 flex items-center text-gray-700 hover:text-gray-900 transition-colors group"
+        className="fixed top-4 left-4 sm:top-6 sm:left-6 flex items-center text-gray-700 hover:text-gray-900 transition-colors group z-10"
       >
-        <Home className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-        <span className="font-medium">Back to Home</span>
+        <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-2 group-hover:scale-110 transition-transform" />
+        <span className="font-medium text-sm sm:text-base">Back to Home</span>
       </Link>
 
-      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 items-center mt-8 lg:mt-0">
         {/* Left Column - Brand/Info */}
         <motion.div
           initial={{ opacity: 0, x: -30 }}
@@ -313,20 +313,20 @@ export default function RegisterPage() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full"
+          className="w-full max-w-lg mx-auto lg:max-w-none"
         >
           <Card className="rounded-2xl border-0 shadow-2xl overflow-hidden bg-white/90 backdrop-blur-sm">
             {/* Form Header */}
-            <div className="p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="p-6 sm:p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-md">
-                  <UserPlus className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-md">
+                  <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                     Seller Registration
                   </h1>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-sm sm:text-base">
                     Create your seller account in minutes
                   </p>
                 </div>
@@ -334,8 +334,8 @@ export default function RegisterPage() {
             </div>
 
             {/* Form Content */}
-            <div className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6 md:p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Shop Name */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -343,13 +343,13 @@ export default function RegisterPage() {
                     Shop Name *
                   </label>
                   <div className="relative">
-                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="shop_name"
                       placeholder="Your shop name"
                       value={form.shop_name}
                       onChange={handleChange}
-                      className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -361,14 +361,14 @@ export default function RegisterPage() {
                     Email Address *
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="email"
                       placeholder="you@example.com"
                       type="email"
                       value={form.email}
                       onChange={handleChange}
-                      className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -380,14 +380,14 @@ export default function RegisterPage() {
                     Password *
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="password"
                       placeholder="At least 6 characters"
                       type={showPassword ? "text" : "password"}
                       value={form.password}
                       onChange={handleChange}
-                      className="pl-10 pr-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 pr-9 sm:pr-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                     <button
                       type="button"
@@ -395,9 +395,9 @@ export default function RegisterPage() {
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
+                        <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                       ) : (
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                       )}
                     </button>
                   </div>
@@ -410,13 +410,13 @@ export default function RegisterPage() {
                     Phone Number *
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="phone"
                       placeholder="0912345678"
                       value={form.phone}
                       onChange={handleChange}
-                      className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -428,13 +428,13 @@ export default function RegisterPage() {
                     WhatsApp Number *
                   </label>
                   <div className="relative">
-                    <MessageCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <MessageCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="whatsapp"
                       placeholder="0912345678"
                       value={form.whatsapp}
                       onChange={handleChange}
-                      className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -446,13 +446,13 @@ export default function RegisterPage() {
                     City *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <Input
                       name="city"
                       placeholder="Your city"
                       value={form.city}
                       onChange={handleChange}
-                      className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all"
+                      className="pl-9 sm:pl-10 py-2 sm:py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all text-sm sm:text-base"
                     />
                   </div>
                 </div>
@@ -464,21 +464,21 @@ export default function RegisterPage() {
                     Full Address *
                   </label>
                   <div className="relative">
-                    <Home className="absolute left-3 top-4 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Home className="absolute left-3 top-4 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                     <textarea
                       name="address"
                       placeholder="Enter your complete address"
                       value={form.address}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all resize-none"
+                      className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all resize-none text-sm sm:text-base"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Terms and Conditions */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
                 <div className="flex items-start">
                   <button
                     type="button"
@@ -494,7 +494,7 @@ export default function RegisterPage() {
                     )}
                   </button>
                   <div>
-                    <p className="text-sm text-gray-700">
+                    <p className="text-xs sm:text-sm text-gray-700">
                       By registering, you agree to our{" "}
                       <Link
                         href="/terms"
@@ -513,12 +513,12 @@ export default function RegisterPage() {
                       </Link>
                       . Your account will be reviewed by our admin team within 24-48 hours.
                     </p>
-                    <div className="flex items-center mt-2 text-sm text-gray-600">
-                      <Shield className="w-4 h-4 mr-2" />
+                    <div className="flex items-start sm:items-center mt-2 text-xs sm:text-sm text-gray-600">
+                      <Shield className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                       <span>Your data is protected and will never be shared with third parties.</span>
                     </div>
                     {!agreedToTerms && (
-                      <p className="text-sm text-red-600 mt-2 font-medium">
+                      <p className="text-xs sm:text-sm text-red-600 mt-2 font-medium">
                         ✓ You must agree to the Terms and Privacy Policy to register
                       </p>
                     )}
@@ -530,25 +530,25 @@ export default function RegisterPage() {
               <Button
                 onClick={handleRegister}
                 disabled={loading || !agreedToTerms}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                className="w-full mt-4 sm:mt-6 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating account...
+                    <span className="text-sm sm:text-base">Creating account...</span>
                   </div>
                 ) : (
                   <>
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Register as Seller
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span className="text-sm sm:text-base">Register as Seller</span>
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                   </>
                 )}
               </Button>
 
               {/* Login Link */}
-              <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-                <p className="text-gray-600">
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-100 text-center">
+                <p className="text-gray-600 text-sm sm:text-base">
                   Already have an account?{" "}
                   <Link
                     href="/auth/login"
@@ -561,10 +561,16 @@ export default function RegisterPage() {
             </div>
 
             {/* Form Footer */}
-            <div className="px-8 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
-              <div className="flex items-center justify-center text-sm text-gray-500">
-                <Shield className="w-4 h-4 mr-2" />
-                <span>Secure registration • 0% commission • Direct buyer contact</span>
+            <div className="px-4 sm:px-6 md:px-8 py-3 sm:py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-center text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+                <div className="flex items-center mb-1 sm:mb-0 sm:mr-2">
+                  <Shield className="w-4 h-4 mr-2" />
+                  <span>Secure registration</span>
+                </div>
+                <span className="hidden sm:inline mx-2">•</span>
+                <span className="mb-1 sm:mb-0">0% commission</span>
+                <span className="hidden sm:inline mx-2">•</span>
+                <span>Direct buyer contact</span>
               </div>
             </div>
           </Card>
@@ -572,16 +578,38 @@ export default function RegisterPage() {
       </div>
 
       {/* Mobile Branding */}
-      <div className="mt-8 text-center lg:hidden">
-        <div className="flex items-center justify-center space-x-2 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-            <Store className="w-6 h-6 text-white" />
+      <div className="mt-6 lg:hidden">
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+              <Store className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Et.Shoes
+              </h1>
+              <p className="text-sm text-gray-600">Direct Seller Marketplace</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Et.Shoes
-            </h1>
-            <p className="text-sm text-gray-600">Direct Seller Marketplace</p>
+          <div className="space-y-3 max-w-md mx-auto px-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm">Verified Seller Program</p>
+                <p className="text-xs text-gray-500">Build trust with buyers</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Navigation className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900 text-sm">Direct Buyer Contact</p>
+                <p className="text-xs text-gray-500">No middlemen, no commissions</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
