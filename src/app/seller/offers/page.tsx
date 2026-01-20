@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,9 @@ import {
   Clock,
   Eye,
   ChevronDown,
-  Check
+  Check,
+  Search,
+  X
 } from "lucide-react";
 
 type Product = { id: string; name: string };
@@ -49,6 +51,9 @@ type Seller = {
   whatsapp: string;
 };
 
+// Define shoe sizes 39-45
+const SHOE_SIZES = [39, 40, 41, 42, 43, 44, 45];
+
 export default function SellerOffersPage() {
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,9 +63,50 @@ export default function SellerOffersPage() {
 
   const [productId, setProductId] = useState("");
   const [variantId, setVariantId] = useState("");
-  const [size, setSize] = useState<number | "">("");
   const [price, setPrice] = useState<number | "">("");
-  const [stock, setStock] = useState<number | "">("");
+  
+  // State for size selection and stock
+  const [selectedSizes, setSelectedSizes] = useState<number[]>([]);
+  const [sizeStocks, setSizeStocks] = useState<Record<number, number | "">>({});
+
+  // State for search
+  const [productSearch, setProductSearch] = useState("");
+  const [variantSearch, setVariantSearch] = useState("");
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+
+  // State for toast notifications
+  const [toasts, setToasts] = useState<Array<{
+    id: number;
+    type: 'success' | 'error' | 'info';
+    message: string;
+  }>>([]);
+
+  // Filtered products and variants based on search
+  const filteredProducts = useMemo(() => {
+    if (!productSearch) return products;
+    return products.filter(product =>
+      product.name.toLowerCase().includes(productSearch.toLowerCase())
+    );
+  }, [products, productSearch]);
+
+  const filteredVariants = useMemo(() => {
+    if (!variantSearch) return variants;
+    return variants.filter(variant =>
+      variant.color.toLowerCase().includes(variantSearch.toLowerCase())
+    );
+  }, [variants, variantSearch]);
+
+  // Function to show toast
+  const showToast = (type: 'success' | 'error' | 'info', message: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, type, message }]);
+    
+    // Auto remove toast after 5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -88,6 +134,7 @@ export default function SellerOffersPage() {
         await fetchOffers(user.id);
       } catch (error) {
         console.error("Error initializing:", error);
+        showToast('error', 'Error initializing: ' + (error as Error).message);
       } finally {
         setIsLoading(false);
       }
@@ -97,66 +144,170 @@ export default function SellerOffersPage() {
   }, []);
 
   const fetchOffers = async (sellerId: string) => {
-    const { data } = await supabase
-      .from("seller_offers")
-      .select("*")
-      .eq("seller_id", sellerId);
-    setOffers(data || []);
+    try {
+      const { data, error } = await supabase
+        .from("seller_offers")
+        .select("*")
+        .eq("seller_id", sellerId);
+      
+      if (error) throw error;
+      setOffers(data || []);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+      showToast('error', 'Error fetching offers: ' + (error as Error).message);
+    }
   };
 
   const fetchVariants = async (pid: string) => {
-    const { data } = await supabase
-      .from("product_variants")
-      .select("id, color")
-      .eq("product_id", pid);
-    setVariants(data || []);
+    try {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .select("id, color")
+        .eq("product_id", pid);
+      
+      if (error) throw error;
+      setVariants(data || []);
+    } catch (error) {
+      console.error("Error fetching variants:", error);
+      showToast('error', 'Error fetching variants: ' + (error as Error).message);
+    }
+  };
+
+  // Handle size checkbox change
+  const handleSizeChange = (size: number) => {
+    if (selectedSizes.includes(size)) {
+      // Remove size if already selected
+      setSelectedSizes(prev => prev.filter(s => s !== size));
+      
+      // Remove stock data for this size
+      setSizeStocks(prev => {
+        const updated = { ...prev };
+        delete updated[size];
+        return updated;
+      });
+    } else {
+      // Add size if not selected
+      setSelectedSizes(prev => [...prev, size]);
+      setSizeStocks(prev => ({ ...prev, [size]: "" }));
+    }
+  };
+
+  // Handle stock input change for a specific size
+  const handleStockChange = (size: number, value: string) => {
+    setSizeStocks(prev => ({
+      ...prev,
+      [size]: value === "" ? "" : Number(value)
+    }));
   };
 
   const submitOffer = async () => {
     if (!seller) {
-      alert("Seller information not found");
+      showToast('error', "Seller information not found");
       return;
     }
 
-    if (!productId || !variantId || !size || !price || !stock) {
-      alert("Please fill all fields");
+    if (!productId || !variantId || !price || selectedSizes.length === 0) {
+      showToast('error', "Please fill all fields and select at least one size");
+      return;
+    }
+
+    // Check if all selected sizes have stock values
+    const hasEmptyStocks = selectedSizes.some(size => 
+      sizeStocks[size] === "" || sizeStocks[size] === undefined
+    );
+    
+    if (hasEmptyStocks) {
+      showToast('error', "Please enter stock quantity for all selected sizes");
       return;
     }
 
     const contact_info = `Phone: ${seller.phone}, WhatsApp: ${seller.whatsapp}`;
 
     try {
-      const { error } = await supabase.from("seller_offers").upsert({
+      // Create an array of offers for each selected size
+      const offersToSubmit = selectedSizes.map(size => ({
         seller_id: seller.id,
         product_id: productId,
         variant_id: variantId,
-        size: Number(size),
+        size: size,
         price: Number(price),
-        stock: Number(stock),
+        stock: Number(sizeStocks[size]),
         contact_info,
-      });
+      }));
 
-      if (error) {
-        alert("Error: " + error.message);
+      // Submit each offer
+      const errors = [];
+      for (const offer of offersToSubmit) {
+        const { error } = await supabase.from("seller_offers").upsert(offer);
+        if (error) {
+          errors.push(error.message);
+        }
+      }
+
+      if (errors.length > 0) {
+        showToast('error', "Error creating some offers: " + errors.join(", "));
         return;
       }
       
       // Success - reset form and refresh offers
-      alert("✅ Offer saved successfully!");
+      showToast('success', `✅ ${offersToSubmit.length} offer(s) saved successfully!`);
       setProductId("");
       setVariantId("");
-      setSize("");
       setPrice("");
-      setStock("");
+      setSelectedSizes([]);
+      setSizeStocks({});
       setVariants([]);
+      setProductSearch("");
+      setVariantSearch("");
+      setShowProductDropdown(false);
+      setShowVariantDropdown(false);
       fetchOffers(seller.id);
     } catch (error: any) {
-      alert("Error: " + error.message);
+      showToast('error', "Error: " + error.message);
     }
   };
 
   const getSelectedProduct = () => products.find(p => p.id === productId);
   const getSelectedVariant = () => variants.find(v => v.id === variantId);
+
+  // Handle product selection
+  const handleProductSelect = (product: Product) => {
+    setProductId(product.id);
+    setProductSearch(product.name);
+    setShowProductDropdown(false);
+    setVariantId("");
+    setVariantSearch("");
+    setSelectedSizes([]);
+    setSizeStocks({});
+    fetchVariants(product.id);
+  };
+
+  // Handle variant selection
+  const handleVariantSelect = (variant: Variant) => {
+    setVariantId(variant.id);
+    setVariantSearch(variant.color);
+    setShowVariantDropdown(false);
+  };
+
+  // Clear product selection
+  const clearProductSelection = () => {
+    setProductId("");
+    setProductSearch("");
+    setVariantId("");
+    setVariantSearch("");
+    setVariants([]);
+    setSelectedSizes([]);
+    setSizeStocks({});
+    setShowVariantDropdown(false);
+  };
+
+  // Clear variant selection
+  const clearVariantSelection = () => {
+    setVariantId("");
+    setVariantSearch("");
+    setSelectedSizes([]);
+    setSizeStocks({});
+  };
 
   if (isLoading) {
     return (
@@ -231,6 +382,46 @@ export default function SellerOffersPage() {
   return (
     <ProtectedRoute allowedRoles={["seller"]}>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        {/* Toast Notifications */}
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              className={`rounded-lg shadow-lg p-4 min-w-[300px] max-w-md border-l-4 ${
+                toast.type === 'success' 
+                  ? 'bg-green-50 border-green-500 text-green-800' 
+                  : toast.type === 'error'
+                  ? 'bg-red-50 border-red-500 text-red-800'
+                  : 'bg-blue-50 border-blue-500 text-blue-800'
+              }`}
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {toast.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : toast.type === 'error' ? (
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-blue-600" />
+                  )}
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">{toast.message}</p>
+                </div>
+                <button
+                  onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                  className="ml-auto pl-3"
+                >
+                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -304,57 +495,178 @@ export default function SellerOffersPage() {
                   </div>
                   
                   <div className="p-6 space-y-6">
-                    {/* Product Selection */}
+                    {/* Product Selection with Search */}
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
                         <ShoppingBag className="inline w-4 h-4 mr-2 text-blue-500" />
                         Select Product
                       </label>
                       <div className="relative">
-                        <select
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all appearance-none bg-white"
-                          value={productId}
-                          onChange={(e) => {
-                            setProductId(e.target.value);
-                            setVariantId("");
-                            if (e.target.value) {
-                              fetchVariants(e.target.value);
-                            } else {
-                              setVariants([]);
-                            }
-                          }}
-                        >
-                          <option value="">Choose a product</option>
-                          {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                        <Grid className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <div className="relative">
+                          <div className="flex items-center">
+                            <Grid className="absolute left-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              type="text"
+                              placeholder="Search or choose a product..."
+                              value={productSearch}
+                              onChange={(e) => {
+                                setProductSearch(e.target.value);
+                                if (!showProductDropdown) setShowProductDropdown(true);
+                              }}
+                              onFocus={() => setShowProductDropdown(true)}
+                              className="pl-10 pr-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                            />
+                            {productId && (
+                              <button
+                                onClick={clearProductSelection}
+                                className="absolute right-3 text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Product Dropdown */}
+                        {showProductDropdown && (
+                          <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-300 shadow-lg max-h-60 overflow-y-auto">
+                            <div className="p-2 border-b border-gray-200">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                  type="text"
+                                  placeholder="Search products..."
+                                  value={productSearch}
+                                  onChange={(e) => setProductSearch(e.target.value)}
+                                  className="pl-10 border-0 focus:ring-0"
+                                  autoFocus
+                                />
+                              </div>
+                            </div>
+                            <div className="py-1">
+                              {filteredProducts.length === 0 ? (
+                                <div className="px-4 py-3 text-gray-500 text-sm">
+                                  No products found
+                                </div>
+                              ) : (
+                                filteredProducts.map(product => (
+                                  <button
+                                    key={product.id}
+                                    onClick={() => handleProductSelect(product)}
+                                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                                      productId === product.id ? 'bg-blue-50 text-blue-700' : ''
+                                    }`}
+                                  >
+                                    <div className="flex items-center">
+                                      {productId === product.id && (
+                                        <Check className="w-4 h-4 mr-2 text-blue-600" />
+                                      )}
+                                      {product.name}
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
+                      {showProductDropdown && (
+                        <div 
+                          className="fixed inset-0 z-0" 
+                          onClick={() => setShowProductDropdown(false)}
+                        />
+                      )}
                     </div>
 
-                    {/* Variant Selection */}
+                    {/* Variant Selection with Search */}
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
                         <Palette className="inline w-4 h-4 mr-2 text-purple-500" />
                         Select Color Variant
                       </label>
                       <div className="relative">
-                        <select
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all appearance-none bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                          value={variantId}
-                          onChange={(e) => setVariantId(e.target.value)}
-                          disabled={!productId || variants.length === 0}
-                        >
-                          <option value="">Choose a color</option>
-                          {variants.map(v => (
-                            <option key={v.id} value={v.id}>{v.color}</option>
-                          ))}
-                        </select>
-                        <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <div className="relative">
+                          <div className="flex items-center">
+                            <Filter className="absolute left-3 w-5 h-5 text-gray-400" />
+                            <Input
+                              type="text"
+                              placeholder={!productId ? "Select a product first" : "Search or choose a color..."}
+                              value={variantSearch}
+                              onChange={(e) => {
+                                setVariantSearch(e.target.value);
+                                if (!showVariantDropdown) setShowVariantDropdown(true);
+                              }}
+                              onFocus={() => {
+                                if (productId && variants.length > 0) setShowVariantDropdown(true);
+                              }}
+                              className="pl-10 pr-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              disabled={!productId || variants.length === 0}
+                            />
+                            {variantId && (
+                              <button
+                                onClick={clearVariantSelection}
+                                className="absolute right-3 text-gray-400 hover:text-gray-600"
+                                disabled={!productId || variants.length === 0}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Variant Dropdown */}
+                        {showVariantDropdown && productId && variants.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white rounded-xl border border-gray-300 shadow-lg max-h-60 overflow-y-auto">
+                            <div className="p-2 border-b border-gray-200">
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Input
+                                  type="text"
+                                  placeholder="Search colors..."
+                                  value={variantSearch}
+                                  onChange={(e) => setVariantSearch(e.target.value)}
+                                  className="pl-10 border-0 focus:ring-0"
+                                  autoFocus
+                                />
+                              </div>
+                            </div>
+                            <div className="py-1">
+                              {filteredVariants.length === 0 ? (
+                                <div className="px-4 py-3 text-gray-500 text-sm">
+                                  No colors found
+                                </div>
+                              ) : (
+                                filteredVariants.map(variant => (
+                                  <button
+                                    key={variant.id}
+                                    onClick={() => handleVariantSelect(variant)}
+                                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                                      variantId === variant.id ? 'bg-blue-50 text-blue-700' : ''
+                                    }`}
+                                  >
+                                    <div className="flex items-center">
+                                      <div 
+                                        className="w-4 h-4 rounded-full mr-3 border border-gray-300"
+                                        style={{ backgroundColor: variant.color.toLowerCase() }}
+                                      />
+                                      {variant.color}
+                                      {variantId === variant.id && (
+                                        <Check className="w-4 h-4 ml-auto text-blue-600" />
+                                      )}
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
+                      {showVariantDropdown && (
+                        <div 
+                          className="fixed inset-0 z-0" 
+                          onClick={() => setShowVariantDropdown(false)}
+                        />
+                      )}
                       {productId && variants.length === 0 && (
                         <p className="text-sm text-amber-600">
                           No color variants available for this product
@@ -362,62 +674,83 @@ export default function SellerOffersPage() {
                       )}
                     </div>
 
-                    {/* Size, Price, Stock Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          <Package className="inline w-4 h-4 mr-2 text-green-500" />
-                          Size
-                        </label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="e.g., 42"
-                            value={size}
-                            onChange={e => setSize(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                          />
-                          <TrendingUp className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    {/* Size Selector */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        <Package className="inline w-4 h-4 mr-2 text-green-500" />
+                        Select Sizes (Shoe Sizes 39-45)
+                      </label>
+                      <div className="bg-white p-4 rounded-xl border border-gray-300">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                          {SHOE_SIZES.map(size => (
+                            <div key={size} className="flex flex-col">
+                              <div className="flex items-center mb-1">
+                                <div 
+                                  className={`w-5 h-5 rounded-md border flex items-center justify-center mr-2 cursor-pointer transition-all ${
+                                    selectedSizes.includes(size)
+                                      ? "bg-blue-600 border-blue-600"
+                                      : "bg-white border-gray-300 hover:border-blue-400"
+                                  }`}
+                                  onClick={() => handleSizeChange(size)}
+                                >
+                                  {selectedSizes.includes(size) && (
+                                    <Check className="w-3 h-3 text-white" />
+                                  )}
+                                </div>
+                                <span className="font-medium">{size}</span>
+                              </div>
+                              
+                              {selectedSizes.includes(size) && (
+                                <div className="relative ml-7">
+                                  <Input
+                                    type="number"
+                                    placeholder="Stock"
+                                    value={sizeStocks[size] || ""}
+                                    onChange={(e) => handleStockChange(size, e.target.value)}
+                                    className="pl-10 py-2 h-9 text-sm rounded-lg border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                    min="0"
+                                  />
+                                  <Layers className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
+                        
+                        {selectedSizes.length > 0 && (
+                          <div className="pt-4 border-t border-gray-200">
+                            <p className="text-sm font-medium text-gray-700 mb-2">
+                              Selected Sizes: {selectedSizes.sort((a, b) => a - b).join(", ")}
+                            </p>
+                            <div className="text-xs text-gray-500">
+                              <p>• Enter stock quantity for each selected size</p>
+                              <p>• Each size will create a separate offer</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    </div>
 
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          <DollarSign className="inline w-4 h-4 mr-2 text-green-500" />
-                          Price (ETB)
-                        </label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="e.g., 450"
-                            value={price}
-                            onChange={e => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                          />
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          <Layers className="inline w-4 h-4 mr-2 text-amber-500" />
-                          Stock Quantity
-                        </label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            placeholder="e.g., 10"
-                            value={stock}
-                            onChange={e => setStock(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                          />
-                          <Layers className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        </div>
+                    {/* Price Input */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        <DollarSign className="inline w-4 h-4 mr-2 text-green-500" />
+                        Price (ETB)
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          placeholder="e.g., 450"
+                          value={price}
+                          onChange={e => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                          className="pl-10 py-3 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        />
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       </div>
                     </div>
 
                     {/* Selection Preview */}
-                    {(getSelectedProduct() || getSelectedVariant()) && (
+                    {(getSelectedProduct() || getSelectedVariant() || selectedSizes.length > 0) && (
                       <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
                         <h3 className="font-semibold text-gray-900 mb-2">Offer Preview</h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -439,38 +772,54 @@ export default function SellerOffersPage() {
                               </div>
                             </div>
                           )}
-                          {size && (
-                            <div className="bg-white p-3 rounded-lg">
-                              <p className="text-sm text-gray-500">Size</p>
-                              <p className="font-medium">{size}</p>
-                            </div>
-                          )}
                           {price && (
                             <div className="bg-white p-3 rounded-lg">
                               <p className="text-sm text-gray-500">Price</p>
                               <p className="font-medium">{price} ETB</p>
                             </div>
                           )}
+                          {selectedSizes.length > 0 && (
+                            <div className="bg-white p-3 rounded-lg">
+                              <p className="text-sm text-gray-500">Sizes Selected</p>
+                              <p className="font-medium">{selectedSizes.length}</p>
+                            </div>
+                          )}
                         </div>
+                        
+                        {/* Show detailed size preview */}
+                        {selectedSizes.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-blue-100">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Size Details:</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {selectedSizes.sort((a, b) => a - b).map(size => (
+                                <div key={size} className="bg-white p-2 rounded-lg border border-blue-100">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium">Size {size}</span>
+                                    <span className="text-green-600 font-medium">
+                                      Stock: {sizeStocks[size] || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
                     {/* Submit Button */}
                     <Button
                       onClick={submitOffer}
-                      disabled={!productId || !variantId || !size || !price || !stock}
+                      disabled={!productId || !variantId || !price || selectedSizes.length === 0}
                       className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Upload className="w-5 h-5 mr-2" />
-                      {offers.some(o => o.product_id === productId && o.variant_id === variantId && o.size === Number(size))
-                        ? "Update Existing Offer"
-                        : "Upload New Offer"
-                      }
+                      {`Upload ${selectedSizes.length} Offer${selectedSizes.length !== 1 ? 's' : ''}`}
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
 
                     <p className="text-sm text-gray-500 text-center">
-                      This will create or update your offer. Buyers will see your contact information.
+                      This will create {selectedSizes.length > 0 ? selectedSizes.length : 'multiple'} offer(s). Each size will be a separate offer.
                     </p>
                   </div>
                 </Card>
@@ -518,7 +867,7 @@ export default function SellerOffersPage() {
                           </li>
                           <li className="flex items-center">
                             <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                            <span>Contact info is auto-filled from your profile</span>
+                            <span>You can select multiple sizes at once</span>
                           </li>
                         </ul>
                       </div>
